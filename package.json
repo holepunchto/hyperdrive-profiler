@@ -6,6 +6,9 @@
   "scripts": {
     "test": "standard"
   },
+  "bin": {
+    "hyperdrive-profiler": "bin.js"
+  },
   "files": [
     "bin.js"
   ],

@@ -16,10 +16,13 @@ const byteSize = require('tiny-byte-size')
 
 const cmd = command('hyperdrive-profiler',
   arg('<key>', 'Public key of the hyperdrive to download'),
-  flag('--interval|-i [statsIntervalSec]', 'Interval (in seconds) at which to print the performance stats (default 10)'),
+  flag('--interval|-i [integer]', 'Interval (in seconds) at which to print the performance stats (default 10)'),
+  flag('--ip', 'Print the IP address (obfuscated by default)'),
+
   async function ({ args, flags }) {
     const key = IdEnc.decode(args.key)
-    const statsIntervalMs = 1000 * (parseInt(flags.statsIntervalSec || 10))
+    const statsIntervalMs = 1000 * (parseInt(flags.interval || 10))
+    const printIp = flags.ip
 
     const tStart = performance.now()
     let secTillMetadata = null
@@ -62,7 +65,7 @@ const cmd = command('hyperdrive-profiler',
       if (secTillFullyDownload) timestampsInfo += `\n  - Fully downloaded in ${secTillFullyDownload.toFixed(2)} seconds`
 
       const udxInfo = getUdxInfo(swarmStats, elapsedSec)
-      const swarmInfo = getSwarmInfo(swarmStats)
+      const swarmInfo = getSwarmInfo(swarmStats, { printIp })
       const hypercoreInfo = getHypercoreInfo(hypercoreStats)
       console.log(`${timestampsInfo}\n${udxInfo}${swarmInfo}${hypercoreInfo}`)
       console.log(`${'-'.repeat(30)}\n`)
@@ -109,8 +112,10 @@ function getHypercoreInfo (stats) {
 `
 }
 
-function getSwarmInfo (swarmStats) {
-  const address = swarmStats.dhtStats.getRemoteAddress()
+function getSwarmInfo (swarmStats, { printIp }) {
+  const address = printIp
+    ? swarmStats.dhtStats.getRemoteAddress()
+    : 'xxx.xxx.xxx.xxx'
   const firewalled = swarmStats.dhtStats.isFirewalled
   return `Connection info
   - Address: ${address} (firewalled: ${firewalled})
