@@ -10,7 +10,7 @@ const IdEnc = require('hypercore-id-encoding')
 const Corestore = require('corestore')
 const Hyperdrive = require('hyperdrive')
 const Hyperswarm = require('hyperswarm')
-// const HypercoreStats = require('hypercore-stats')
+const HypercoreStats = require('hypercore-stats')
 const HyperswarmStats = require('hyperswarm-stats')
 const byteSize = require('tiny-byte-size')
 
@@ -33,7 +33,7 @@ const cmd = command('hyperdrive-profiler',
 
     const store = new Corestore(tmpdir)
 
-    // const hypercoreStats = await HypercoreStats.fromCorestore(store, { cacheExpiryMs: 1000 })
+    const hypercoreStats = await HypercoreStats.fromCorestore(store, { cacheExpiryMs: 1000 })
 
     const drive = new Hyperdrive(store, key)
     const swarm = new Hyperswarm()
@@ -53,16 +53,10 @@ const cmd = command('hyperdrive-profiler',
     const tStart = performance.now()
     const printStats = () => {
       const elapsedSec = (performance.now() - tStart) / 1000
-      const roundedSec = Math.round(elapsedSec)
-      const stats = { ...swarmStats.asDict(), ...swarmStats.dhtStats.summary() }
-      stats.elapsedTime = `${roundedSec} seconds`
-      stats.bytesReceived = `${byteSize(stats.bytesReceived)} (${byteSize(stats.bytesReceived / elapsedSec)} / second)`
-      stats.bytesTransmitted = `${byteSize(stats.bytesTransmitted)} (${byteSize(stats.bytesTransmitted / elapsedSec)} / second)`
-      stats.packetsReceived = `${stats.packetsReceived} (${Math.round(stats.packetsReceived / elapsedSec)} / second)`
-      stats.packetsTransmitted = `${stats.packetsTransmitted} (${Math.round(stats.packetsTransmitted / elapsedSec)} / second)`
-
-      console.log('Stats overview:', stats)
-      // console.log(hypercoreStats._getStats())
+      const udxInfo = getUdxInfo(swarmStats, elapsedSec)
+      const swarmInfo = getSwarmInfo(swarmStats)
+      const hypercoreInfo = getHypercoreInfo(hypercoreStats)
+      console.log(`Stats after ${elapsedSec.toFixed(2)} seconds:\n ${udxInfo}${swarmInfo}${hypercoreInfo}`)
     }
     const statsInterval = setInterval(printStats, statsIntervalMs)
 
@@ -94,6 +88,50 @@ const cmd = command('hyperdrive-profiler',
 
 async function gcDir (dir) {
   await fs.promises.rm(dir, { recursive: true })
+}
+
+function getHypercoreInfo (stats) {
+  return `Hypercore stats
+  - Hotswaps: ${stats.totalHotswaps}
+`
+}
+
+function getSwarmInfo (swarmStats) {
+  const address = swarmStats.dhtStats.getRemoteAddress()
+  const firewalled = swarmStats.dhtStats.isFirewalled
+  return `Connection info
+  - Address: ${address} (firewalled: ${firewalled})
+  - Connections:
+    - Attempted: ${swarmStats.connects.client.attempted}
+    - Opened: ${swarmStats.connects.client.opened}
+    - Closed: ${swarmStats.connects.client.closed}
+  - Connection issues:
+    - Retransmission timeouts: ${swarmStats.getRTOCountAcrossAllStreams()}
+    - Fast recoveries: ${swarmStats.getFastRecoveriesAcrossAllStreams()}
+    - Retransmits: ${swarmStats.getRetransmitsAcrossAllStreams()}
+`
+}
+
+function getUdxInfo (swarmStats, elapsedSec) {
+  const bytesRx = swarmStats.dhtStats.udxBytesReceived
+  const bytesRxPerSec = (bytesRx / elapsedSec).toFixed(2)
+  const bytesTx = swarmStats.dhtStats.udxBytesTransmitted
+  const bytesTxPerSec = (bytesTx / elapsedSec).toFixed(2)
+  const packetsRx = swarmStats.dhtStats.udxPacketsReceived
+  const packetsRxPerSec = (packetsRx / elapsedSec).toFixed(2)
+  const packetsTx = swarmStats.dhtStats.udxPacketsTransmitted
+  const packetsTxPerSec = (packetsTx / elapsedSec).toFixed(2)
+
+  const packetsDropped = swarmStats.dhtStats.udxPacketsDropped
+  const packetsDroppedPerSec = (packetsDropped / elapsedSec).toFixed(2)
+
+  return `UDX
+  - Bytes received: ${byteSize(bytesRx)} (${byteSize(bytesRxPerSec)} / second)
+  - Bytes transmitted: ${byteSize(bytesTx)} (${byteSize(bytesTxPerSec)} / second)
+  - Packets received: ${packetsRx} (${packetsRxPerSec} / second)
+  - Packets transmitted: ${packetsTx} (${packetsTxPerSec} / second)
+  - Packets dropped: ${swarmStats.dhtStats.udxPacketsDropped} (${packetsDroppedPerSec} / second)
+`
 }
 
 cmd.parse()
