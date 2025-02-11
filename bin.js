@@ -55,7 +55,10 @@ const cmd = command('hyperdrive-profiler',
       const elapsedSec = (performance.now() - tStart) / 1000
 
       let timestampsInfo = `General\n  - Runtime: ${elapsedSec.toFixed(2)} seconds`
-      timestampsInfo += `\n  - Metadata found in: ${secTillMetadata.toFixed(2).toString() + ' seconds' || 'unknown (still connecting...)'}`
+      timestampsInfo += '\n  - Metadata found in: '
+      timestampsInfo += secTillMetadata
+        ? `${secTillMetadata.toFixed(2).toString()} seconds`
+        : 'unknown (still connecting...)'
       if (secTillFullyDownload) timestampsInfo += `\n  - Fully downloaded in ${secTillFullyDownload.toFixed(2)} seconds`
 
       const udxInfo = getUdxInfo(swarmStats, elapsedSec)
