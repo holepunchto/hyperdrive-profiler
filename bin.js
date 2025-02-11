@@ -28,6 +28,7 @@ const cmd = command('hyperdrive-profiler',
     const tmpdir = path.join(os.tmpdir(), `hyperdrive-profiler-tmp-${Math.random().toString(16).slice(2)}`)
     console.info(`Profiling hyperdrive download for ${IdEnc.normalize(key)}`)
     console.info(`Using temporary directory ${tmpdir}`)
+    console.info(`Printing progress every ${(statsIntervalMs / 1000).toFixed(0)} seconds`)
 
     try {
       await gcDir(tmpdir)
@@ -71,7 +72,7 @@ const cmd = command('hyperdrive-profiler',
       if (cancelling) console.info('Cancelling before the download is complete...')
       clearInterval(statsInterval)
 
-      console.log('\nDestroying swarm...')
+      console.log('Destroying swarm...')
       await swarm.destroy()
       console.log('Closing corestore...')
       await store.close()
@@ -86,6 +87,7 @@ const cmd = command('hyperdrive-profiler',
     secTillMetadata = (performance.now() - tStart) / 1000
 
     console.info(`Downloading drive version ${drive.version}`)
+    console.log(`\n${'-'.repeat(30)}\n`)
     await drive.download('/', { wait: true })
 
     secTillFullyDownload = (performance.now() - tStart) / 1000
