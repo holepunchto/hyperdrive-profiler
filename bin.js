@@ -18,11 +18,13 @@ const cmd = command('hyperdrive-profiler',
   arg('<key>', 'Public key of the hyperdrive to download'),
   flag('--interval|-i [integer]', 'Interval (in seconds) at which to print the performance stats (default 10)'),
   flag('--ip', 'Print the IP address (obfuscated by default)'),
+  flag('--detail', 'Include detailed stats'),
 
   async function ({ args, flags }) {
     const key = IdEnc.decode(args.key)
     const statsIntervalMs = 1000 * (parseInt(flags.interval || 10))
     const printIp = flags.ip
+    const detail = flags.detail
 
     const tStart = performance.now()
     let secTillMetadata = null
@@ -65,10 +67,10 @@ const cmd = command('hyperdrive-profiler',
       if (secTillFullyDownload) timestampsInfo += `\n  - Fully downloaded in ${secTillFullyDownload.toFixed(2)} seconds`
 
       const udxInfo = getUdxInfo(swarmStats, elapsedSec)
-      const swarmInfo = getSwarmInfo(swarmStats, { printIp })
-      const hypercoreInfo = getHypercoreInfo(hypercoreStats)
+      const swarmInfo = getSwarmInfo(swarmStats, { printIp, detail })
+      const hypercoreInfo = getHypercoreInfo(hypercoreStats, { detail })
       console.log(`${timestampsInfo}\n${udxInfo}${swarmInfo}${hypercoreInfo}`)
-      console.log(`${'-'.repeat(30)}\n`)
+      console.log(`${'-'.repeat(50)}\n`)
     }
     const statsInterval = setInterval(printStats, statsIntervalMs)
 
@@ -93,7 +95,7 @@ const cmd = command('hyperdrive-profiler',
     secTillMetadata = (performance.now() - tStart) / 1000
 
     console.info(`Downloading drive version ${drive.version}`)
-    console.log(`\n${'-'.repeat(30)}\n`)
+    console.log(`\n${'-'.repeat(50)}\n`)
     await drive.download('/', { wait: true })
 
     secTillFullyDownload = (performance.now() - tStart) / 1000
@@ -106,18 +108,32 @@ async function gcDir (dir) {
   await fs.promises.rm(dir, { recursive: true })
 }
 
-function getHypercoreInfo (stats) {
-  return `Hypercore stats
+function getHypercoreInfo (stats, { detail }) {
+  let res = `Hypercore stats
   - Hotswaps: ${stats.totalHotswaps}
 `
+  if (detail) {
+    res += `  - Commands:
+    - Sync: ${stats.totalWireSyncReceived} received / ${stats.totalWireSyncTransmitted} transmitted
+    - Request: ${stats.totalWireRequestReceived} received / ${stats.totalWireRequestTransmitted} transmitted
+    - Cancel: ${stats.totalWireCancelReceived} received / ${stats.totalWireCancelTransmitted} transmitted
+    - Data: ${stats.totalWireDataReceived} received / ${stats.totalWireDataTransmitted} transmitted
+    - Want: ${stats.totalWireWantReceived} received / ${stats.totalWireWantTransmitted} transmitted
+    - Bitfield: ${stats.totalWireBitfieldReceived} received / ${stats.totalWireBitfieldTransmitted} transmitted
+    - Range: ${stats.totalWireRangeReceived} received / ${stats.totalWireRangeTransmitted} transmitted
+    - Extension: ${stats.totalWireExtensionReceived} received / ${stats.totalWireExtensionTransmitted} transmitted
+`
+  }
+
+  return res
 }
 
-function getSwarmInfo (swarmStats, { printIp }) {
+function getSwarmInfo (swarmStats, { printIp, detail }) {
   const address = printIp
     ? swarmStats.dhtStats.getRemoteAddress()
     : 'xxx.xxx.xxx.xxx'
   const firewalled = swarmStats.dhtStats.isFirewalled
-  return `Connection info
+  let res = `Connection info
   - Address: ${address} (firewalled: ${firewalled})
   - Connections:
     - Attempted: ${swarmStats.connects.client.attempted}
@@ -128,6 +144,25 @@ function getSwarmInfo (swarmStats, { printIp }) {
     - Fast recoveries: ${swarmStats.getFastRecoveriesAcrossAllStreams()}
     - Retransmits: ${swarmStats.getRetransmitsAcrossAllStreams()}
 `
+
+  if (detail) {
+    const { consistent, random, open } = swarmStats.dhtStats.punches
+    res += `  - Punches:
+    - Consistent: ${consistent}
+    - Random: ${random}
+    - Open: ${open}
+`
+
+    res += `  - Total Queries: ${swarmStats.dhtStats.queries.total}
+  - DHT commands
+    - Ping: ${swarmStats.dhtStats.pingCmds.rx} received / ${swarmStats.dhtStats.pingCmds.tx} transmitted
+    - Ping NAT: ${swarmStats.dhtStats.pingNatCmds.rx} received / ${swarmStats.dhtStats.pingNatCmds.tx} transmitted
+    - Down Hint: ${swarmStats.dhtStats.downHintCmds.rx} received / ${swarmStats.dhtStats.downHintCmds.tx} transmitted
+    - Find Node: ${swarmStats.dhtStats.findNodeCmds.rx} received / ${swarmStats.dhtStats.findNodeCmds.tx} transmitted
+`
+  }
+
+  return res
 }
 
 function getUdxInfo (swarmStats, elapsedSec) {
