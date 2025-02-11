@@ -31,6 +31,10 @@
     "standard": "^17.1.2"
   },
   "dependencies": {
+    "bare-events": "^2.5.4",
+    "bare-fs": "^4.0.1",
+    "bare-os": "^3.4.0",
+    "bare-path": "^3.0.0",
     "corestore": "^6.18.4",
     "graceful-goodbye": "^1.3.3",
     "hypercore-id-encoding": "^1.3.0",
@@ -40,5 +44,23 @@
     "hyperswarm-stats": "^1.1.4",
     "paparam": "^1.8.0",
     "tiny-byte-size": "^1.1.0"
+  },
+  "imports": {
+    "events": {
+      "bare": "bare-events",
+      "default": "events"
+    },
+    "fs": {
+      "bare": "bare-fs",
+      "default": "fs"
+    },
+    "os": {
+      "bare": "bare-os",
+      "default": "os"
+    },
+    "path": {
+      "bare": "bare-path",
+      "default": "path"
+    }
   }
 }

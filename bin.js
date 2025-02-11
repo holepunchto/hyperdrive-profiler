@@ -4,6 +4,7 @@ const { once } = require('events')
 const fs = require('fs')
 const os = require('os')
 const path = require('path')
+
 const { command, arg, flag } = require('paparam')
 const goodbye = require('graceful-goodbye')
 const IdEnc = require('hypercore-id-encoding')
