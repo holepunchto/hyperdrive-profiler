@@ -15,3 +15,8 @@ hyperdrive-profiler <drive key>
 ```
 
 This downloads the Hyperdrive with the given key, and displays performance and progress metrics.
+
+To see all options, run
+```
+hyperdrive-profiler --help
+```
