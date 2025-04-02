@@ -14,25 +14,27 @@ const Hyperswarm = require('hyperswarm')
 const HypercoreStats = require('hypercore-stats')
 const HyperswarmStats = require('hyperswarm-stats')
 const byteSize = require('tiny-byte-size')
+const Localdrive = require('localdrive')
 
 const cmd = command('hyperdrive-profiler',
   arg('<key>', 'Public key of the hyperdrive to download'),
+  arg('<host>', 'h'),
+  arg('<port>', 'p'),
   flag('--interval|-i [integer]', 'Interval (in seconds) at which to print the performance stats (default 10)'),
   flag('--ip', 'Print the IP address (obfuscated by default)'),
   flag('--detail', 'Include detailed stats'),
 
   async function ({ args, flags }) {
-    const key = IdEnc.decode(args.key)
     const statsIntervalMs = 1000 * (parseInt(flags.interval || 10))
     const printIp = flags.ip
     const detail = flags.detail
 
-    const tStart = performance.now()
+    let tStart = null
     let secTillMetadata = null
     let secTillFullyDownload = null
+    let statsInterval = null
 
     const tmpdir = path.join(os.tmpdir(), `hyperdrive-profiler-tmp-${Math.random().toString(16).slice(2)}`)
-    console.info(`Profiling hyperdrive download for ${IdEnc.normalize(key)}`)
     console.info(`Using temporary directory ${tmpdir}`)
     console.info(`Printing progress every ${(statsIntervalMs / 1000).toFixed(0)} seconds`)
 
@@ -46,9 +48,12 @@ const cmd = command('hyperdrive-profiler',
 
     const hypercoreStats = await HypercoreStats.fromCorestore(store, { cacheExpiryMs: 1000 })
 
-    const drive = new Hyperdrive(store, key)
-    const swarm = new Hyperswarm()
+    const drive = new Hyperdrive(store, Buffer.from(args.key, 'hex'))
+    const swarm = new Hyperswarm({ bootstrap: [{ host: '127.0.0.1', port: 49739 }] })
     swarm.on('connection', conn => {
+      console.log('connection')
+      tStart = performance.now()
+      statsInterval = setInterval(printStats, statsIntervalMs)
       store.replicate(conn)
       conn.on('error', (e) => {
         console.log(`Connection error: ${e.stack}`)
@@ -58,6 +63,8 @@ const cmd = command('hyperdrive-profiler',
     const swarmStats = new HyperswarmStats(swarm)
 
     const printStats = () => {
+      console.log('tstart', tStart)
+      if (!tStart) return
       const elapsedSec = (performance.now() - tStart) / 1000
 
       let timestampsInfo = `General\n  - Runtime: ${elapsedSec.toFixed(2)} seconds`
@@ -73,7 +80,6 @@ const cmd = command('hyperdrive-profiler',
       console.log(`${timestampsInfo}\n${udxInfo}${swarmInfo}${hypercoreInfo}`)
       console.log(`${'-'.repeat(50)}\n`)
     }
-    const statsInterval = setInterval(printStats, statsIntervalMs)
 
     let cancelling = true
     goodbye(async () => {
@@ -100,8 +106,9 @@ const cmd = command('hyperdrive-profiler',
     await drive.download('/', { wait: true })
 
     secTillFullyDownload = (performance.now() - tStart) / 1000
-    cancelling = false
-    goodbye.exit()
+    console.log('key:', drive.key.toString('hex'))
+    //cancelling = false
+     goodbye.exit()
   }
 )
 
