@@ -101,7 +101,7 @@ const cmd = command('hyperdrive-profiler',
     await drive.ready()
 
     const puts = []
-    for (let i = 0; i < 100000; i++) puts.push(drive.put('/parent/child/grandchild' + i, Buffer.alloc(1024)))
+    for (let i = 0; i < 2000; i++) puts.push(drive.put('/parent/child/grandchild' + i, Buffer.alloc(1024 * 50)))
     console.log('start puts')
     await Promise.all(puts)
     console.log('finish puts')

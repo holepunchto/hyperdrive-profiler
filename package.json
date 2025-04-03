@@ -45,7 +45,8 @@
     "hyperswarm-stats": "^1.1.4",
     "localdrive": "^2.1.0",
     "paparam": "^1.8.0",
-    "tiny-byte-size": "^1.1.0"
+    "tiny-byte-size": "^1.1.0",
+    "udx-native": "^1.17.6"
   },
   "imports": {
     "events": {

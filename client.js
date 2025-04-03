@@ -49,7 +49,7 @@ const cmd = command('hyperdrive-profiler',
     const hypercoreStats = await HypercoreStats.fromCorestore(store, { cacheExpiryMs: 1000 })
 
     const drive = new Hyperdrive(store, Buffer.from(args.key, 'hex'))
-    const swarm = new Hyperswarm({ bootstrap: [{ host: '127.0.0.1', port: 49739 }] })
+    const swarm = new Hyperswarm({ bootstrap: [{ host: '127.0.0.1', port: 49737 }] })
     swarm.on('connection', conn => {
       console.log('connection')
       tStart = performance.now()
