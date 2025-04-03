@@ -5,115 +5,127 @@ const fs = require('fs')
 const os = require('os')
 const path = require('path')
 
-const { command, arg, flag } = require('paparam')
+const { command, flag } = require('paparam')
 const goodbye = require('graceful-goodbye')
-const IdEnc = require('hypercore-id-encoding')
 const Corestore = require('corestore')
 const Hyperdrive = require('hyperdrive')
 const Hyperswarm = require('hyperswarm')
 const HypercoreStats = require('hypercore-stats')
 const HyperswarmStats = require('hyperswarm-stats')
 const byteSize = require('tiny-byte-size')
-const Localdrive = require('localdrive')
+
+const createTestnet = require('@hyperswarm/testnet')
+
+let tStart = null
+let secTillMetadata = null
+let secTillFullyDownload = null
+let statsInterval = null
+let printIp = null
+let detail = null
+let hypercoreStats = null
+let swarmStats = null
 
 const cmd = command('hyperdrive-profiler',
-  arg('<key>', 'Public key of the hyperdrive to download'),
-  arg('<host>', 'h'),
-  arg('<port>', 'p'),
   flag('--interval|-i [integer]', 'Interval (in seconds) at which to print the performance stats (default 10)'),
   flag('--ip', 'Print the IP address (obfuscated by default)'),
   flag('--detail', 'Include detailed stats'),
+  flag('--local', 'User local DHT'),
 
-  async function ({ args, flags }) {
+  async function ({ flags }) {
     const statsIntervalMs = 1000 * (parseInt(flags.interval || 10))
-    const printIp = flags.ip
-    const detail = flags.detail
 
-    let tStart = null
-    let secTillMetadata = null
-    let secTillFullyDownload = null
-    let statsInterval = null
+    printIp = flags.ip
+    detail = flags.detail
 
-    const tmpdir = path.join(os.tmpdir(), `hyperdrive-profiler-tmp-${Math.random().toString(16).slice(2)}`)
-    console.info(`Using temporary directory ${tmpdir}`)
+    const tmpdirServer = path.join(os.tmpdir(), `hyperdrive-profiler-tmp-${Math.random().toString(16).slice(2)}`)
+    const tmpdirClient = path.join(os.tmpdir(), `hyperdrive-profiler-tmp-${Math.random().toString(16).slice(2)}`)
     console.info(`Printing progress every ${(statsIntervalMs / 1000).toFixed(0)} seconds`)
 
     try {
-      await gcDir(tmpdir)
+      await gcDir(tmpdirServer)
+      await gcDir(tmpdirClient)
     } catch {}
 
-    await fs.promises.mkdir(tmpdir)
+    const testnet = await createTestnet(2)
 
-    const store = new Corestore(tmpdir)
+    await fs.promises.mkdir(tmpdirServer)
+    await fs.promises.mkdir(tmpdirClient)
 
-    const hypercoreStats = await HypercoreStats.fromCorestore(store, { cacheExpiryMs: 1000 })
+    const storeServer = new Corestore(tmpdirServer)
+    const storeClient = new Corestore(tmpdirClient)
 
-    const drive = new Hyperdrive(store, Buffer.from(args.key, 'hex'))
-    const swarm = new Hyperswarm({ bootstrap: [{ host: '127.0.0.1', port: 49737 }] })
-    swarm.on('connection', conn => {
-      console.log('connection')
+    const driveServer = new Hyperdrive(storeServer)
+    await driveServer.ready()
+
+    const puts = []
+    for (let i = 0; i < 2000; i++) puts.push(driveServer.put('/' + i, Buffer.alloc(1024 * 50)))
+    await Promise.all(puts)
+
+    const swarmServer = new Hyperswarm({ bootstrap: flags.local ? testnet.bootstrap : undefined })
+    swarmServer.on('connection', conn => {
+      storeServer.replicate(conn)
+    })
+
+    swarmServer.join(driveServer.discoveryKey, { server: true, client: false })
+    await swarmServer.flush()
+
+    const driveClient = new Hyperdrive(storeClient, driveServer.key)
+    await driveClient.ready()
+
+    const swarmClient = new Hyperswarm({ bootstrap: flags.local ? testnet.bootstrap : undefined })
+
+    hypercoreStats = await HypercoreStats.fromCorestore(storeClient, { cacheExpiryMs: 1000 })
+    swarmStats = new HyperswarmStats(swarmClient)
+
+    swarmClient.on('connection', conn => {
       tStart = performance.now()
       statsInterval = setInterval(printStats, statsIntervalMs)
-      store.replicate(conn)
-      conn.on('error', (e) => {
-        console.log(`Connection error: ${e.stack}`)
-      })
+      storeClient.replicate(conn)
     })
 
-    const swarmStats = new HyperswarmStats(swarm)
+    swarmClient.join(driveClient.discoveryKey, { server: false, client: true })
 
-    const printStats = () => {
-      console.log('tstart', tStart)
-      if (!tStart) return
-      const elapsedSec = (performance.now() - tStart) / 1000
-
-      let timestampsInfo = `General\n  - Runtime: ${elapsedSec.toFixed(2)} seconds`
-      timestampsInfo += '\n  - Metadata found in: '
-      timestampsInfo += secTillMetadata
-        ? `${secTillMetadata.toFixed(2).toString()} seconds`
-        : 'unknown (still connecting...)'
-      if (secTillFullyDownload) timestampsInfo += `\n  - Fully downloaded in ${secTillFullyDownload.toFixed(2)} seconds`
-
-      const udxInfo = getUdxInfo(swarmStats, elapsedSec)
-      const swarmInfo = getSwarmInfo(swarmStats, { printIp, detail })
-      const hypercoreInfo = getHypercoreInfo(hypercoreStats, { detail })
-      console.log(`${timestampsInfo}\n${udxInfo}${swarmInfo}${hypercoreInfo}`)
-      console.log(`${'-'.repeat(50)}\n`)
-    }
-
-    let cancelling = true
-    goodbye(async () => {
-      printStats()
-      if (cancelling) console.info('Cancelling before the download is complete...')
-      clearInterval(statsInterval)
-
-      console.log('Destroying swarm...')
-      await swarm.destroy()
-      console.log('Closing corestore...')
-      await store.close()
-      console.info('Cleaning up temporary directory...')
-      await gcDir(tmpdir)
-    })
-
-    await drive.ready()
-
-    swarm.join(drive.discoveryKey, { server: false, client: true })
-    if (drive.db.core.length <= 1) await once(drive.db.core, 'append') // DEVNOTE: in theory we could get a not-latest length, but 'good enough'
+    if (driveClient.db.core.length <= 1) await once(driveClient.db.core, 'append') // DEVNOTE: in theory we could get a not-latest length, but 'good enough'
     secTillMetadata = (performance.now() - tStart) / 1000
 
-    console.info(`Downloading drive version ${drive.version}`)
-    console.log(`\n${'-'.repeat(50)}\n`)
-    await drive.download('/', { wait: true })
+    await driveClient.download('/', { wait: true })
 
     secTillFullyDownload = (performance.now() - tStart) / 1000
-    console.log('key:', drive.key.toString('hex'))
-    //cancelling = false
-     goodbye.exit()
+
+    goodbye(async () => {
+      printStats(hypercoreStats, swarmServer)
+      clearInterval(statsInterval)
+      await swarmServer.destroy()
+      await swarmClient.destroy()
+      await storeServer.close()
+      await storeClient.close()
+      await gcDir(tmpdirServer)
+      await gcDir(tmpdirClient)
+    })
+
+    goodbye.exit()
   }
 )
 
 async function gcDir (dir) {
   await fs.promises.rm(dir, { recursive: true })
+}
+
+function printStats () {
+  const elapsedSec = (performance.now() - tStart) / 1000
+
+  let timestampsInfo = `General\n  - Runtime: ${elapsedSec.toFixed(2)} seconds`
+  timestampsInfo += '\n  - Metadata found in: '
+  timestampsInfo += secTillMetadata
+    ? `${secTillMetadata.toFixed(2).toString()} seconds`
+    : 'unknown (still connecting...)'
+  if (secTillFullyDownload) timestampsInfo += `\n  - Fully downloaded in ${secTillFullyDownload.toFixed(2)} seconds`
+
+  const udxInfo = getUdxInfo(swarmStats, elapsedSec)
+  const swarmInfo = getSwarmInfo(swarmStats, { printIp, detail })
+  const hypercoreInfo = getHypercoreInfo(hypercoreStats, { detail })
+  console.log(`${timestampsInfo}\n${udxInfo}${swarmInfo}${hypercoreInfo}`)
+  console.log(`${'-'.repeat(50)}\n`)
 }
 
 function getHypercoreInfo (stats, { detail }) {
