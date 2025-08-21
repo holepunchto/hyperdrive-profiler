@@ -97,7 +97,7 @@ const cmd = command('hyperdrive-profiler',
 
     console.info(`Downloading drive version ${drive.version}`)
     console.log(`\n${'-'.repeat(50)}\n`)
-    await drive.download('/', { wait: true })
+    await drive.download('/', { wait: true }).done()
 
     secTillFullyDownload = (performance.now() - tStart) / 1000
     cancelling = false
