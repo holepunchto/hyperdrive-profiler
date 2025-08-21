@@ -7,7 +7,8 @@
     "test": "standard"
   },
   "bin": {
-    "hyperdrive-profiler": "bin.js"
+    "hyperdrive-profiler": "bin.js",
+    "hyperdrive-profiler-bare": "bare bin.js"
   },
   "files": [
     "bin.js"
@@ -35,6 +36,7 @@
     "bare-fs": "^4.0.1",
     "bare-os": "^3.4.0",
     "bare-path": "^3.0.0",
+    "bare-performance": "^1.0.1",
     "corestore": "^7.0.0",
     "graceful-goodbye": "^1.3.3",
     "hypercore-id-encoding": "^1.3.0",
@@ -61,6 +63,10 @@
     "path": {
       "bare": "bare-path",
       "default": "path"
+    },
+    "perf_hooks": {
+      "bare": "bare-performance",
+      "default": "perf_hooks"
     }
   }
 }
