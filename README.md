@@ -2,6 +2,8 @@
 
 Profile [Hyperdrive](https://github.com/holepunchto/hyperdrive) download performance.
 
+The current major (v2) works for Hyperdrive v13. The old major (v1) works for Hyperdrive v11.
+
 ## Install
 
 ```
