@@ -8,7 +8,7 @@
   },
   "bin": {
     "hyperdrive-profiler": "bin.js",
-    "hyperdrive-profiler-bare": "bare bin.js"
+    "hyperdrive-profiler-bare": "bare-bin.sh"
   },
   "files": [
     "bin.js"
