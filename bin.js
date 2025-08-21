@@ -4,6 +4,7 @@ const { once } = require('events')
 const fs = require('fs')
 const os = require('os')
 const path = require('path')
+const { performance } = require('perf_hooks')
 
 const { command, arg, flag } = require('paparam')
 const goodbye = require('graceful-goodbye')
