@@ -2,16 +2,18 @@
   "name": "hyperdrive-profiler",
   "version": "2.0.2",
   "description": "Profile hyperdrive download performance",
-  "main": "bin.js",
+  "main": "index.js",
   "scripts": {
     "test": "standard"
   },
   "bin": {
     "hyperdrive-profiler": "bin.js",
-    "hyperdrive-profiler-bare": "bare-bin.sh"
+    "hyperdrive-profiler-bare": "bare-bin.js"
   },
   "files": [
-    "bin.js"
+    "bin.js",
+    "bare-bin.js",
+    "index.js"
   ],
   "repository": {
     "type": "git",
@@ -45,7 +47,8 @@
     "hyperswarm": "^4.8.4",
     "hyperswarm-stats": "^1.2.0",
     "paparam": "^1.8.0",
-    "tiny-byte-size": "^1.1.0"
+    "tiny-byte-size": "^1.1.0",
+    "which-runtime": "^1.3.0"
   },
   "imports": {
     "events": {
