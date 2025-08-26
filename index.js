@@ -66,7 +66,15 @@ const cmd = command('hyperdrive-profiler',
         ? `${secTillMetadata.toFixed(2).toString()} seconds`
         : 'unknown (still connecting...)'
       timestampsInfo += `\n  - Metadata db: ${drive.db.core.contiguousLength} / ${drive.db.core.length} (contiguous length / length)`
-      timestampsInfo += `\n  - Blobs core: ${drive.blobs?.core?.contiguousLength || 'loading'} / ${drive.blobs?.core?.length || 'loading'} (contiguous length / length)`
+
+      const blobsContig = drive.blobs?.core?.contiguousLength == null
+        ? 'loading'
+        : drive.blobs.core.contiguousLength
+      const blobsLength = drive.blobs?.core?.length == null
+        ? 'loading'
+        : drive.blobs.core.length
+
+      timestampsInfo += `\n  - Blobs core: ${blobsContig} / ${blobsLength} (contiguous length / length)`
       if (secTillFullyDownload) timestampsInfo += `\n  - Fully downloaded in ${secTillFullyDownload.toFixed(2)} seconds`
 
       const udxInfo = getUdxInfo(swarmStats, elapsedSec)
