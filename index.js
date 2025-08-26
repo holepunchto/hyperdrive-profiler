@@ -65,6 +65,8 @@ const cmd = command('hyperdrive-profiler',
       timestampsInfo += secTillMetadata
         ? `${secTillMetadata.toFixed(2).toString()} seconds`
         : 'unknown (still connecting...)'
+      timestampsInfo += `\n  - Metadata db: ${drive.db.core.contiguousLength} /  ${drive.db.core.length} (contiguous length / length)`
+      timestampsInfo += `\n  - Blobs core: ${drive.blobs.core.contiguousLength} /  ${drive.db.core.length} (contiguous length / length)`
       if (secTillFullyDownload) timestampsInfo += `\n  - Fully downloaded in ${secTillFullyDownload.toFixed(2)} seconds`
 
       const udxInfo = getUdxInfo(swarmStats, elapsedSec)
