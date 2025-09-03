@@ -1,6 +1,6 @@
 {
   "name": "hyperdrive-profiler",
-  "version": "2.0.4",
+  "version": "2.1.0",
   "description": "Profile hyperdrive download performance",
   "main": "index.js",
   "scripts": {
