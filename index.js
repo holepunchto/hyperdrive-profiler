@@ -77,10 +77,31 @@ const cmd = command('hyperdrive-profiler',
       timestampsInfo += `\n  - Blobs core: ${blobsContig} / ${blobsLength} (contiguous length / length)`
       if (secTillFullyDownload) timestampsInfo += `\n  - Fully downloaded in ${secTillFullyDownload.toFixed(2)} seconds`
 
+      let remoteLength = 0
+      let remoteContiguousLength = 0
+      let blobRemoteLength = 0
+      let blobRemoteContiguousLength = 0
+
+      for (const peer of drive.core.peers) {
+        remoteLength = Math.max(peer.remoteLength, remoteLength)
+        remoteContiguousLength = Math.max(peer.remoteContiguousLength, remoteContiguousLength)
+      }
+
+      for (const peer of drive.blobs?.core.peers) {
+        blobRemoteLength = Math.max(peer.remoteLength, blobRemoteLength)
+        blobRemoteContiguousLength = Math.max(peer.remoteContiguousLength, blobRemoteContiguousLength)
+      }
+
+      let contigInfo = 'Availability:\n'
+      contigInfo += '  - Metadata remote length: ' + remoteLength + '\n'
+      contigInfo += '  - Metadata remote contiguous length: ' + remoteContiguousLength + '\n'
+      contigInfo += '  - Blob remote length: ' + blobRemoteLength + '\n'
+      contigInfo += '  - Blob remote contiguous length: ' + blobRemoteContiguousLength + '\n'
+
       const udxInfo = getUdxInfo(swarmStats, elapsedSec)
       const swarmInfo = getSwarmInfo(swarmStats, { printIp, detail })
       const hypercoreInfo = getHypercoreInfo(hypercoreStats, { detail })
-      console.log(`${timestampsInfo}\n${udxInfo}${swarmInfo}${hypercoreInfo}`)
+      console.log(`${timestampsInfo}\n${udxInfo}${swarmInfo}${hypercoreInfo}${contigInfo}`)
       console.log(`${'-'.repeat(50)}\n`)
     }
     const statsInterval = setInterval(printStats, statsIntervalMs)
