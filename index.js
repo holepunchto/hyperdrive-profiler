@@ -255,7 +255,7 @@ async function printRemotesInfo (drive, remotes) {
     if (remotes.includes(pubKey)) {
       const done = p.remoteLength > 0 && p.remoteContiguousLength === p.remoteLength
       if (remotes && done) nrDoneDbBlindPeers++
-      console.info(`    - ${IdEnc.normalize(p.remotePublicKey)} ${done ? 'DONE' : 'DOWNLOADING' } ${p.remoteContiguousLength} / ${p.remoteLength}`)
+      console.info(`    - ${IdEnc.normalize(p.remotePublicKey)} ${done ? 'DONE' : 'DOWNLOADING'} ${p.remoteContiguousLength} / ${p.remoteLength}`)
     }
   }
 
@@ -265,7 +265,7 @@ async function printRemotesInfo (drive, remotes) {
     if (remotes.includes(pubKey)) {
       const done = p.remoteLength > 0 && p.remoteContiguousLength === p.remoteLength
       if (remotes && done) nrDoneBlobsBlindPeers++
-      console.info(`    - ${IdEnc.normalize(p.remotePublicKey)} ${done ? 'DONE' : 'DOWNLOADING' } ${p.remoteContiguousLength} / ${p.remoteLength}`)
+      console.info(`    - ${IdEnc.normalize(p.remotePublicKey)} ${done ? 'DONE' : 'DOWNLOADING'} ${p.remoteContiguousLength} / ${p.remoteLength}`)
     }
   }
 
