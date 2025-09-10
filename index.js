@@ -271,6 +271,8 @@ async function printRemotesInfo (drive, remotes) {
 
   if (nrDoneDbBlindPeers === remotes.length && nrDoneBlobsBlindPeers === remotes.length) {
     console.info('All remotes fully downloaded this drive')
+  } else {
+    console.info('Not all remotes have fully downloaded this drive')
   }
 }
 
