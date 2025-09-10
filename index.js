@@ -20,6 +20,7 @@ const cmd = command('hyperdrive-profiler',
   flag('--interval|-i [integer]', 'Interval (in seconds) at which to print the performance stats (default 10)'),
   flag('--ip', 'Print the IP address (obfuscated by default)'),
   flag('--detail', 'Include detailed stats'),
+  flag('--remotes|-r [string]', 'Location of a .txt file containing remote keys. Will print the remote status of each of them. Useful to verify all remotes downloaded the drive.'),
 
   async function ({ args, flags }) {
     const key = IdEnc.decode(args.key)
@@ -36,6 +37,14 @@ const cmd = command('hyperdrive-profiler',
     console.info(`Using temporary directory ${tmpdir}`)
     console.info(`Printing progress every ${(statsIntervalMs / 1000).toFixed(0)} seconds`)
 
+    const remotes = []
+    if (flags.remotes) {
+      console.info(`Reading remote peers from ${flags.remotes}`)
+      const content = await fs.promises.readFile(flags.remotes, { encoding: 'utf8' })
+      const keys = content.trim().split('\n')
+      for (const k of keys) remotes.push(IdEnc.normalize(k))
+      console.info(`Printing remote progress for:\n- ${remotes.join('\n- ')}\n`)
+    }
     try {
       await gcDir(tmpdir)
     } catch {}
@@ -102,6 +111,8 @@ const cmd = command('hyperdrive-profiler',
       const swarmInfo = getSwarmInfo(swarmStats, { printIp, detail })
       const hypercoreInfo = getHypercoreInfo(hypercoreStats, { detail })
       console.log(`${timestampsInfo}\n${udxInfo}${swarmInfo}${hypercoreInfo}${contigInfo}`)
+
+      if (remotes.length > 0) printRemotesInfo(drive, remotes)
       console.log(`${'-'.repeat(50)}\n`)
     }
     const statsInterval = setInterval(printStats, statsIntervalMs)
@@ -123,6 +134,19 @@ const cmd = command('hyperdrive-profiler',
 
     await drive.ready()
 
+    console.info(`Drive db public key: ${IdEnc.normalize(drive.key)}`)
+    console.info(`Drive db discovery key: ${IdEnc.normalize(drive.discoveryKey)}`)
+    if (drive.blobs) {
+      await drive.blobs.ready()
+      console.info(`Drive blobs public key: ${IdEnc.normalize(drive.blobs.key)}`)
+      console.info(`Drive blobs discovery key: ${IdEnc.normalize(drive.blobs.discoveryKey)}`)
+    } else {
+      drive.on('blobs', async () => {
+        await drive.blobs.ready()
+        console.info(`Drive blobs public key: ${IdEnc.normalize(drive.blobs.key)}`)
+        console.info(`Drive blobs discovery key: ${IdEnc.normalize(drive.blobs.discoveryKey)}`)
+      })
+    }
     swarm.join(drive.discoveryKey, { server: false, client: true })
     if (drive.db.core.length <= 1) await once(drive.db.core, 'append') // DEVNOTE: in theory we could get a not-latest length, but 'good enough'
     secTillMetadata = (performance.now() - tStart) / 1000
@@ -218,6 +242,38 @@ function getUdxInfo (swarmStats, elapsedSec) {
   - Packets transmitted: ${packetsTx} (${packetsTxPerSec} / second)
   - Packets dropped: ${swarmStats.dhtStats.udxPacketsDropped} (${packetsDroppedPerSec} / second)
 `
+}
+
+async function printRemotesInfo (drive, remotes) {
+  console.info('Remote download progress overview')
+  let nrDoneDbBlindPeers = 0
+  let nrDoneBlobsBlindPeers = 0
+
+  console.info('  - DB core:')
+  for (const p of drive.db.core.replicator.peers) {
+    const pubKey = IdEnc.normalize(p.remotePublicKey)
+    if (remotes.includes(pubKey)) {
+      const done = p.remoteLength > 0 && p.remoteContiguousLength === p.remoteLength
+      if (remotes && done) nrDoneDbBlindPeers++
+      console.info(`    - ${IdEnc.normalize(p.remotePublicKey)} ${done ? 'DONE' : 'DOWNLOADING'} ${p.remoteContiguousLength} / ${p.remoteLength}`)
+    }
+  }
+
+  console.info('  - Blobs core:')
+  for (const p of drive.blobs.core.replicator.peers) {
+    const pubKey = IdEnc.normalize(p.remotePublicKey)
+    if (remotes.includes(pubKey)) {
+      const done = p.remoteLength > 0 && p.remoteContiguousLength === p.remoteLength
+      if (remotes && done) nrDoneBlobsBlindPeers++
+      console.info(`    - ${IdEnc.normalize(p.remotePublicKey)} ${done ? 'DONE' : 'DOWNLOADING'} ${p.remoteContiguousLength} / ${p.remoteLength}`)
+    }
+  }
+
+  if (nrDoneDbBlindPeers === remotes.length && nrDoneBlobsBlindPeers === remotes.length) {
+    console.info('All remotes fully downloaded this drive')
+  } else {
+    console.info('Not all remotes have fully downloaded this drive')
+  }
 }
 
 cmd.parse()
