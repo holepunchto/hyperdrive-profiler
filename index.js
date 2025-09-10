@@ -87,7 +87,7 @@ const cmd = command('hyperdrive-profiler',
         remoteContiguousLength = Math.max(peer.remoteContiguousLength, remoteContiguousLength)
       }
 
-      for (const peer of drive.blobs?.core.peers) {
+      for (const peer of drive.blobs?.core.peers || []) {
         blobRemoteLength = Math.max(peer.remoteLength, blobRemoteLength)
         blobRemoteContiguousLength = Math.max(peer.remoteContiguousLength, blobRemoteContiguousLength)
       }
