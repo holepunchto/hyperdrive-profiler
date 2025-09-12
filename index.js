@@ -86,6 +86,9 @@ const cmd = command('hyperdrive-profiler',
       timestampsInfo += `\n  - Blobs core: ${blobsContig} / ${blobsLength} (contiguous length / length)`
       if (secTillFullyDownload) timestampsInfo += `\n  - Fully downloaded in ${secTillFullyDownload.toFixed(2)} seconds`
 
+      timestampsInfo += `\n  - Nr peers db core: ${drive.db.core.peers.length} `
+      if (drive.blobs) timestampsInfo += `\n  - Nr peers blobs core: ${drive.blobs.core.peers.length} `
+
       let remoteLength = 0
       let remoteContiguousLength = 0
       let blobRemoteLength = 0
