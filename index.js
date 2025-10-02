@@ -263,7 +263,7 @@ async function printRemotesInfo (drive, remotes) {
   }
 
   console.info('  - Blobs core:')
-  for (const p of drive.blobs.core.replicator.peers) {
+  for (const p of drive.blobs?.core?.replicator.peers || []) {
     const pubKey = IdEnc.normalize(p.remotePublicKey)
     if (remotes.includes(pubKey)) {
       const done = p.remoteLength > 0 && p.remoteContiguousLength === p.remoteLength
