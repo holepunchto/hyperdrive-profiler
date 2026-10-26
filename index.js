@@ -88,17 +88,18 @@ const cmd = command(
         : 'unknown (still connecting...)'
       timestampsInfo += `\n  - Metadata db: ${drive.db.core.contiguousLength} / ${drive.db.core.length} (contiguous length / length)`
 
-      const blobsContig =
-        drive.blobs?.core?.contiguousLength == null ? 'loading' : drive.blobs.core.contiguousLength
-      const blobsLength = drive.blobs?.core?.length == null ? 'loading' : drive.blobs.core.length
+      const blobsContig = drive.blobs?.core?.contiguousLength === null || drive.blobs?.core?.contiguousLength === undefined ? 'loading' : drive.blobs.core.contiguousLength
+      const blobsLength = drive.blobs?.core?.length === null || drive.blobs?.core?.length === undefined ? 'loading' : drive.blobs.core.length
 
       timestampsInfo += `\n  - Blobs core: ${blobsContig} / ${blobsLength} (contiguous length / length)`
-      if (secTillFullyDownload)
+      if (secTillFullyDownload) {
         timestampsInfo += `\n  - Fully downloaded in ${secTillFullyDownload.toFixed(2)} seconds`
+      }
 
       timestampsInfo += `\n  - Nr peers db core: ${drive.db.core.peers.length} `
-      if (drive.blobs)
+      if (drive.blobs) {
         timestampsInfo += `\n  - Nr peers blobs core: ${drive.blobs.core.peers.length} `
+      }
 
       let remoteLength = 0
       let remoteContiguousLength = 0
