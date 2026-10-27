@@ -15,16 +15,23 @@ const HypercoreStats = require('hypercore-stats')
 const HyperswarmStats = require('hyperswarm-stats')
 const byteSize = require('tiny-byte-size')
 
-const cmd = command('hyperdrive-profiler',
+const cmd = command(
+  'hyperdrive-profiler',
   arg('<key>', 'Public key of the hyperdrive to download'),
-  flag('--interval|-i [integer]', 'Interval (in seconds) at which to print the performance stats (default 10)'),
+  flag(
+    '--interval|-i [integer]',
+    'Interval (in seconds) at which to print the performance stats (default 10)'
+  ),
   flag('--ip', 'Print the IP address (obfuscated by default)'),
   flag('--detail', 'Include detailed stats'),
-  flag('--remotes|-r [string]', 'Location of a .txt file containing remote keys. Will print the remote status of each of them. Useful to verify all remotes downloaded the drive.'),
+  flag(
+    '--remotes|-r [string]',
+    'Location of a .txt file containing remote keys. Will print the remote status of each of them. Useful to verify all remotes downloaded the drive.'
+  ),
 
   async function ({ args, flags }) {
     const key = IdEnc.decode(args.key)
-    const statsIntervalMs = 1000 * (parseInt(flags.interval || 10))
+    const statsIntervalMs = 1000 * parseInt(flags.interval || 10)
     const printIp = flags.ip
     const detail = flags.detail
 
@@ -32,8 +39,13 @@ const cmd = command('hyperdrive-profiler',
     let secTillMetadata = null
     let secTillFullyDownload = null
 
-    const tmpdir = path.join(os.tmpdir(), `hyperdrive-profiler-tmp-${Math.random().toString(16).slice(2)}`)
-    console.info(`Profiling hyperdrive download for ${IdEnc.normalize(key)} using runtime: ${runtime}`)
+    const tmpdir = path.join(
+      os.tmpdir(),
+      `hyperdrive-profiler-tmp-${Math.random().toString(16).slice(2)}`
+    )
+    console.info(
+      `Profiling hyperdrive download for ${IdEnc.normalize(key)} using runtime: ${runtime}`
+    )
     console.info(`Using temporary directory ${tmpdir}`)
     console.info(`Printing progress every ${(statsIntervalMs / 1000).toFixed(0)} seconds`)
 
@@ -57,7 +69,7 @@ const cmd = command('hyperdrive-profiler',
 
     const drive = new Hyperdrive(store, key)
     const swarm = new Hyperswarm()
-    swarm.on('connection', conn => {
+    swarm.on('connection', (conn) => {
       store.replicate(conn)
       conn.on('error', (e) => {
         console.log(`Connection error: ${e.stack}`)
@@ -76,18 +88,25 @@ const cmd = command('hyperdrive-profiler',
         : 'unknown (still connecting...)'
       timestampsInfo += `\n  - Metadata db: ${drive.db.core.contiguousLength} / ${drive.db.core.length} (contiguous length / length)`
 
-      const blobsContig = drive.blobs?.core?.contiguousLength == null
-        ? 'loading'
-        : drive.blobs.core.contiguousLength
-      const blobsLength = drive.blobs?.core?.length == null
-        ? 'loading'
-        : drive.blobs.core.length
+      const blobsContig =
+        drive.blobs?.core?.contiguousLength === null ||
+        drive.blobs?.core?.contiguousLength === undefined
+          ? 'loading'
+          : drive.blobs.core.contiguousLength
+      const blobsLength =
+        drive.blobs?.core?.length === null || drive.blobs?.core?.length === undefined
+          ? 'loading'
+          : drive.blobs.core.length
 
       timestampsInfo += `\n  - Blobs core: ${blobsContig} / ${blobsLength} (contiguous length / length)`
-      if (secTillFullyDownload) timestampsInfo += `\n  - Fully downloaded in ${secTillFullyDownload.toFixed(2)} seconds`
+      if (secTillFullyDownload) {
+        timestampsInfo += `\n  - Fully downloaded in ${secTillFullyDownload.toFixed(2)} seconds`
+      }
 
       timestampsInfo += `\n  - Nr peers db core: ${drive.db.core.peers.length} `
-      if (drive.blobs) timestampsInfo += `\n  - Nr peers blobs core: ${drive.blobs.core.peers.length} `
+      if (drive.blobs) {
+        timestampsInfo += `\n  - Nr peers blobs core: ${drive.blobs.core.peers.length} `
+      }
 
       let remoteLength = 0
       let remoteContiguousLength = 0
@@ -101,7 +120,10 @@ const cmd = command('hyperdrive-profiler',
 
       for (const peer of drive.blobs?.core.peers || []) {
         blobRemoteLength = Math.max(peer.remoteLength, blobRemoteLength)
-        blobRemoteContiguousLength = Math.max(peer.remoteContiguousLength, blobRemoteContiguousLength)
+        blobRemoteContiguousLength = Math.max(
+          peer.remoteContiguousLength,
+          blobRemoteContiguousLength
+        )
       }
 
       let contigInfo = 'Availability:\n'
@@ -164,11 +186,11 @@ const cmd = command('hyperdrive-profiler',
   }
 )
 
-async function gcDir (dir) {
+async function gcDir(dir) {
   await fs.promises.rm(dir, { recursive: true })
 }
 
-function getHypercoreInfo (stats, { detail }) {
+function getHypercoreInfo(stats, { detail }) {
   let res = `Hypercore stats
   - Hotswaps: ${stats.totalHotswaps}
 `
@@ -188,10 +210,8 @@ function getHypercoreInfo (stats, { detail }) {
   return res
 }
 
-function getSwarmInfo (swarmStats, { printIp, detail }) {
-  const address = printIp
-    ? swarmStats.dhtStats.getRemoteAddress()
-    : 'xxx.xxx.xxx.xxx'
+function getSwarmInfo(swarmStats, { printIp, detail }) {
+  const address = printIp ? swarmStats.dhtStats.getRemoteAddress() : 'xxx.xxx.xxx.xxx'
   const firewalled = swarmStats.dhtStats.isFirewalled
   let res = `Connection info
   - Address: ${address} (firewalled: ${firewalled})
@@ -225,7 +245,7 @@ function getSwarmInfo (swarmStats, { printIp, detail }) {
   return res
 }
 
-function getUdxInfo (swarmStats, elapsedSec) {
+function getUdxInfo(swarmStats, elapsedSec) {
   const bytesRx = swarmStats.dhtStats.udxBytesReceived
   const bytesRxPerSec = (bytesRx / elapsedSec).toFixed(2)
   const bytesTx = swarmStats.dhtStats.udxBytesTransmitted
@@ -247,7 +267,7 @@ function getUdxInfo (swarmStats, elapsedSec) {
 `
 }
 
-async function printRemotesInfo (drive, remotes) {
+async function printRemotesInfo(drive, remotes) {
   console.info('Remote download progress overview')
   let nrDoneDbBlindPeers = 0
   let nrDoneBlobsBlindPeers = 0
@@ -258,7 +278,9 @@ async function printRemotesInfo (drive, remotes) {
     if (remotes.includes(pubKey)) {
       const done = p.remoteLength > 0 && p.remoteContiguousLength === p.remoteLength
       if (remotes && done) nrDoneDbBlindPeers++
-      console.info(`    - ${IdEnc.normalize(p.remotePublicKey)} ${done ? 'DONE' : 'DOWNLOADING'} ${p.remoteContiguousLength} / ${p.remoteLength}`)
+      console.info(
+        `    - ${IdEnc.normalize(p.remotePublicKey)} ${done ? 'DONE' : 'DOWNLOADING'} ${p.remoteContiguousLength} / ${p.remoteLength}`
+      )
     }
   }
 
@@ -268,7 +290,9 @@ async function printRemotesInfo (drive, remotes) {
     if (remotes.includes(pubKey)) {
       const done = p.remoteLength > 0 && p.remoteContiguousLength === p.remoteLength
       if (remotes && done) nrDoneBlobsBlindPeers++
-      console.info(`    - ${IdEnc.normalize(p.remotePublicKey)} ${done ? 'DONE' : 'DOWNLOADING'} ${p.remoteContiguousLength} / ${p.remoteLength}`)
+      console.info(
+        `    - ${IdEnc.normalize(p.remotePublicKey)} ${done ? 'DONE' : 'DOWNLOADING'} ${p.remoteContiguousLength} / ${p.remoteLength}`
+      )
     }
   }
 

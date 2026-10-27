@@ -21,11 +21,13 @@ Note: for running with bare, use `hyperdrive-profiler-bare`,
 This downloads the Hyperdrive with the given key to a temporary folder, and displays performance and progress metrics.
 
 To see all options, run
+
 ```
 hyperdrive-profiler --help
 ```
 
 Example output:
+
 ```
 General
   - Runtime: 97.95 seconds
